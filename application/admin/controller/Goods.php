@@ -27,7 +27,6 @@ class Goods extends Controller
 
     public function index(){
         $list = Db::table('sp_goods')->order('createtime desc')->paginate(10);
-
         $this->assign('list',$list);
         return view();
     }

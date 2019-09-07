@@ -85,11 +85,13 @@
                             <td>{$vo.title}</td>
                             <td>{$vo.cat_id}</td>
                             <td>{$vo.price}</td>
-                            <td></td>
+                            <td>
+                                <image src="{:config('pic_uploads')}{$vo.image}" width="50"/>
+                            </td>
                             <td>{$vo['is_sale'] == 1 ? '上架' : '不上架'}</td>
                             <td>{$vo['is_hot'] == 1 ? '是' : '否'}</td>
                             <td>{$vo.goods_stock}</td>
-                            <td>{$vo.createtime}</td>
+                            <td>{:date('Y-m-d H:i:s',$vo['createtime'])}</td>
                             <td class="td-manage" align="center">
                                 <a title="编辑" onclick=xadmin.open('编辑',"{:url('goods/edit',array('id'=>$vo['id']))}") href="javascript:;">
                                     <i class="layui-icon">&#xe63c;</i></a>&nbsp;&nbsp;&nbsp;&nbsp;

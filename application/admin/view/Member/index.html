@@ -61,10 +61,10 @@
                                 <input type="checkbox" name="id" value="1" lay-skin="primary">
                             </td>
                             <td>{$vo.id}</td>
-                            <td>{$vo.username}</td>
-                            <td>{$vo.sex}</td>
+                            <td>{$vo.nickname}</td>
+                            <td>{if condition="$vo.gender eq 1"}男{else /}女{/if}</td>
                             <td>{$vo.phone}</td>
-                            <td>{$vo.address}</td>
+                            <td>{$vo.country}{$vo.province}{$vo.city}</td>
                             <td class="td-manage">
                                 <a title="编辑" onclick="xadmin.open('编辑','member-edit.html',600,400)"
                                    href="javascript:;">

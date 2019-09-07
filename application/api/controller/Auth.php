@@ -37,7 +37,7 @@ class Auth{
             $info = [$data['openId'],$sessionKey];
             //写入redis
             Session::set($session3rd,$info);
-            $openid = $data['openId'];
+            $openid = $data['openId'];   //openid是唯一用户的标识
             $nickname = $data['nickName'];
             $gender = $data['gender'];
             $country = $data['country'];
