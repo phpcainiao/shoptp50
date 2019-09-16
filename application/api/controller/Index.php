@@ -20,7 +20,7 @@ class Index{
 
     public function getHotGoods()
     {
-        $hotList = Db::table('sp_goods')->where(['is_sale'=>1,'is_hot'=>1])->field('id,good_image,title,price')->paginate(10);
+        $hotList = Db::table('sp_goods')->where(['is_sale'=>1,'is_hot'=>1])->field('id,image,title,price')->paginate(10);
         if($hotList){
             $res = ['code'=>1,'hotList'=>$hotList];
         }else{
@@ -55,7 +55,6 @@ class Index{
         preg_match_all('/(\/\w{3,8}){5}\/\d{16}\.\w{3}/',$images,$matches);
         $goodinfo['images'] = $matches[0];
         $data = ['goodinfo'=>$goodinfo,'attrinfo'=>$attrinfo];
-        mydebug($data,1);
         return json_encode($data);
     }
 
@@ -64,7 +63,7 @@ class Index{
        $cat_id = Request::instance()->get('id');
        $index = Request::instance()->get('index');//0:综合排序 1：价格升高 2：价格降低
        $order = $index == 1 ? 'price asc' : ($index == 2 ? 'price desc' : 'sale_num desc');
-       $goodsList = Db::table('sp_goods')->where('cat_id',$cat_id)->order($order)->field('id,title,price,good_image,sale_num')->paginate(10);
+       $goodsList = Db::table('sp_goods')->where('cat_id',$cat_id)->order($order)->field('id,title,price,image,sale_num')->paginate(10);
         return json_encode($goodsList);
     }
 

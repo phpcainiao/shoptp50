@@ -15,7 +15,7 @@ class Manager extends Controller{
     {
         $userinfo = Session::get('userinfo');
         if(!empty($userinfo)){
-            $this->redirect(url('index/index'));
+            $this->redirect(url('Index/index'));
         }else{
             if(Request::instance()->isPost()){
                 $username = Request::instance()->post('username');
@@ -31,15 +31,14 @@ class Manager extends Controller{
                     Session::set('session_start_time',time());
                     //写入登录日志
 
-                    $arr = ['code'=>1,'url'=>url('admin/index/index')];
+                    $arr = ['code'=>1,'url'=>url('admin/Index/index')];
                 }else{
                     $arr = ['code'=>0,'msg'=>lang('NAME_OR_PWD_FAILED')];
                 }
                 echo json_encode($arr);
                 die;
             }
-
-            return view();
+            return $this->fetch('Manager/login');
         }
     }
 

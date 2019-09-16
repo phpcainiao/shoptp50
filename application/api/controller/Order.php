@@ -13,9 +13,10 @@ class Order{
         $skey = $params['skey'];
         $goodId = $params['goodsId'];
         $cartNum = $params['num'];
+        $cateval = $params['cateval'];
         $memberid = Db::table('sp_member')->where('session3rd',$skey)->column('id');
         $memberid = $memberid[0];
-        $res = Db::table('sp_cart')->insert(['user_id'=>$memberid,'good_id'=>$goodId,'cartnum'=>$cartNum]);
+        $res = Db::table('sp_cart')->insert(['user_id'=>$memberid,'good_id'=>$goodId,'cartnum'=>$cartNum,'cateval'=>$cateval]);
         if($res){
             $arr = ['code'=>1,'msg'=>'加入成功~'];
         }else{
@@ -26,20 +27,11 @@ class Order{
 
     public function getConfirmOrder()
     {
-        $params = Request::instance()->post();
-        $skey = $params['skey'];
-        $goodId = $params['goodsId'];
-        $num = $params['num']; //商品数量
-        $memberInfo = Db::table('sp_member')
-            ->alias('m')
-            ->join('sp_member_address a','a.member_id=m.id')
-            ->where('m.session3rd',$skey)
-            ->where('a.isflag',1)
-            ->field('a.receiver,a.phone,a.area,a.address')
-            ->select();
-        $goodInfo = Db::table('sp_goods')->where('id',$goodId)->field('title,price,good_image')->select();mydebug($goodInfo,1);
-        $goodInfo['num'] = $num;
-        $newInfo = ['address'=>$memberInfo[0],'goodsInfo'=>$goodInfo];
+        $goodId = Request::instance()->post('goodsId');
+        $num = Request::instance()->post('num');//商品数量
+        $goodInfo = Db::table('sp_goods')->where('id',$goodId)->field('title,price,image')->select();
+        $goodInfo[0]['num'] = $num;
+        $newInfo = ['goodsInfo'=>$goodInfo];
         return json_encode($newInfo);
     }
 

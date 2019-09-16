@@ -12,50 +12,30 @@ class Auth{
         $appid = 'wx8e1059d36d261422';
         $secret = 'a93634994a473d9e249423cbb7cc5fb1';
         $code = $params['code'];
-        $encryptedData = $params['encryptedData'];
-        $iv = $params['iv'];
-        $signature = $params['signature'];
-        $skey = isset($params['skey']) ? $params['skey'] : '';
-        if(empty($code) || empty($encryptedData) || empty($iv) || empty($signature)){
-            echo '传递的信息不全！';
-            die;
-        }
+        $nickname = $params['nickname'];
+        $gender = $params['gender'];
+        $city = $params['city'];
+        $province = $params['province'];
+        $country = $params['country'];
+        $avatar = $params['avatarUrl'];
+
         $output = $this->httpUrl($code,$appid,$secret);
-
         $sessionKey = $output['session_key'];
-        //解密用户信息
-        $pc = new wxBizDataCrypt($appid, $sessionKey);
-        $errCode = $pc->decryptData($encryptedData, $iv, $data);
+        $openid = $output['openid'];
 
-        if($errCode != 0){
-            echo '解密数据失败';
-            die;
-        }else{
-            $data = json_decode($data,true);
-            $session3rd = $this->randomFromDev();
-            $data['session3rd'] = $session3rd;
-            $info = [$data['openId'],$sessionKey];
-            //写入redis
-            Session::set($session3rd,$info);
-            $openid = $data['openId'];   //openid是唯一用户的标识
-            $nickname = $data['nickName'];
-            $gender = $data['gender'];
-            $country = $data['country'];
-            $province = $data['province'];
-            $city = $data['city'];
-            $avatar = $data['avatarUrl'];
+        $session3rd = $this->randomFromDev();
+        $info = [$openid,$sessionKey];
+        //写入redis
+        Session::set($session3rd,$info);
 
-            $insert = [$openid,$session3rd,$nickname,$gender,$country,$province,$city,$avatar];
-            if($skey){
-                //非首次登录
-                Db::execute("update sp_member set session3rd='$session3rd' where openid='$openid'");
-            }else{
-                Db::execute("INSERT INTO sp_member(-openid,session3rd,nickname,gender,country,province,city,avatarUrl) VALUES(?,?,?,?,?,?,?,?)",$insert);
-            }
-
-            return json_encode([$session3rd,session_id()]);
+        $insert = [$openid,$session3rd,$nickname,$gender,$country,$province,$city,$avatar];
+        $res = Db::execute("update sp_member set session3rd='$session3rd' where openid='$openid'");
+        if(!$res){
+            //首次登录
+            Db::execute("INSERT INTO sp_member(-openid,session3rd,nickname,gender,country,province,city,avatarUrl) VALUES(?,?,?,?,?,?,?,?)",$insert);
         }
 
+        return json_encode([$session3rd,session_id()]);
     }
 
     protected function httpUrl($code,$appid,$secret){
@@ -114,6 +94,16 @@ class Auth{
     }
 
     /**
+     * 删除登录态
+     * @return string
+     */
+    public function destroy(){
+        $skey = Request::instance()->post('skey');
+        Session::delete($skey);
+        return json_encode(['code'=>1]);
+    }
+
+    /**
      * 添加用户信息
      */
     public function addAddress()
@@ -128,7 +118,26 @@ class Auth{
         $address = $params['detailAddress'];
         $isflag = $params['switch1'] == true ? 1:0;
         $data = ['member_id'=>$memberid,'receiver'=>$receiver,'phone'=>$phone,'area'=>$area,'address'=>$address,'isflag'=>$isflag];
-        $res = Db::table('sp_member_address')->insert($data);
+        //检查当前用户是否已经设置过默认地址
+        if($isflag == true){
+            $info = Db::table('sp_member_address')->where(['member_id'=>$memberid,'isflag'=>1])->find();
+            if($info){
+                //如果当前用户之前设置过默认地址，则新设置的默认地址会替代旧的默认地址，旧的默认地址变为普通地址
+                Db::startTrans();//开启事物
+                try {
+                    Db::table('sp_member_address')->where('member_id',$memberid)->update(['isflag'=>0]);
+                    Db::table('sp_member_address')->insert($data);
+                    Db::commit();//提交事物
+                    $res = 1;
+                } catch (\Exception $e) {
+                    $res = 0;
+                    Db::rollback();//回滚
+                }
+            }else{
+                $res = Db::table('sp_member_address')->insert($data);
+            }
+
+        }
         if($res){
             $arr = ['code'=>1,'msg'=>'保存成功'];
         }else{
@@ -146,5 +155,46 @@ class Auth{
         $memberid = $memberid[0];
         $list = Db::table('sp_member_address')->where('member_id',$memberid)->select();
         return json_encode($list);
+    }
+    public function getDefaultAddress(){
+        $skey = Request::instance()->post('skey');
+        $memberInfo = Db::table('sp_member')
+            ->alias('m')
+            ->join('sp_member_address a','a.member_id=m.id')
+            ->where('m.session3rd',$skey)
+            ->where('a.isflag',1)
+            ->field('a.receiver,a.phone,a.area,a.address')
+            ->select();
+        if(empty($memberInfo)){
+            $arr = ['code'=>0];
+        }else{
+            $arr = ['code'=>1,'info'=>$memberInfo[0]];
+        }
+        return json_encode($arr);
+    }
+    /**
+     * 添加微信地址
+     */
+    public function addWxAddress()
+    {
+        $skey = Request::instance()->post('skey');
+        $cityname = Request::instance()->post('cityname');
+        $countyname = Request::instance()->post('countyname');
+        $detailinfo = Request::instance()->post('detailinfo');
+        $provincename = Request::instance()->post('provincename');
+        $telnumber = Request::instance()->post('telnumber');
+        $username = Request::instance()->post('username');
+        $info = Db::table('sp_member')->where('session3rd',$skey)->field('id')->find();
+        $memberId = $info['id'];
+        $area = $provincename.$countyname.$cityname.$detailinfo;
+        $addressInfo = ['member_id'=>$memberId,'receiver'=>$username,'phone'=>$telnumber,'area'=>$area,'isflag'=>1];
+        $res = Db::table('sp_member_address')->insert($addressInfo);
+        if($res){
+            $arr = ['code'=>1,'address'=>$addressInfo];
+        }else{
+            $arr = ['code'=>0];
+        }
+        return json_encode($arr);
+
     }
 }

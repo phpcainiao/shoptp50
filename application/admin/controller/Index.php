@@ -12,10 +12,10 @@ class Index extends AdminCommon
 
     public function index()
     {
-        return view();
+        return $this->fetch('Index/index');
     }
     public function welcome()
     {
-        return view();
+        $this->fetch('Index/welcome');
     }
 }
